@@ -13,7 +13,7 @@ const localFile = struct {
         }
     }
 
-    fn detectFileType(self: localFile) ![]u8 {
+    fn detectFileType(self: localFile) ![]const u8 {
         var file = try std.fs.cwd().openFile(self.filePath, .{.mode = .read_only });
         defer file.close;
 
@@ -24,15 +24,15 @@ const localFile = struct {
         var fileStream = fileBuf.reader();
         
         try reader.streamUntilDelimiter(firstLine.writer(), '\n', null);
-        if std.mem.startsWith(u8, firstLine.items, "%PDF") {
-            return 'PDF'
+        if (std.mem.startsWith(u8, firstLine.items, "%PDF")) {
+            return "PDF"
         } else {
-            return 'unknownType'
+            return "unknownType"
         }
 
     }
 
-    fn fileReader(self: localFile) !void {
+    fn readFile(self: localFile) !void {
         var file = try std.fs.cwd().openFile(file_path, .{.mode = .read_only });
         defer file.close();
 
