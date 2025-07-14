@@ -4,18 +4,35 @@
 const std = @import("std");
 const testing = std.testing;
 
-const LocalFile = struct {
+const localFile = struct {
     filePath: []const u8,
 
-    fn init(fileLocation: []u8) LocalFile {
+    fn init(fileLocation: []u8) localFile {
         return PdfFile{
             .filePath: fileLocation
         }
     }
 
-    fn detectFileType() !void {}
+    fn detectFileType(self: localFile) ![]u8 {
+        var file = try std.fs.cwd().openFile(self.filePath, .{.mode = .read_only });
+        defer file.close;
 
-    fn fileReader(self: LocalFile) !void {
+        var firstLine= std.ArrayList(u8).init(std.heap.page_allocator);
+        defer firstLine.deinit();
+
+        var fileBuf = std.io.bufferedReader(file.reader());
+        var fileStream = fileBuf.reader();
+        
+        try reader.streamUntilDelimiter(firstLine.writer(), '\n', null);
+        if std.mem.startsWith(u8, firstLine.items, "%PDF") {
+            return 'PDF'
+        } else {
+            return 'unknownType'
+        }
+
+    }
+
+    fn fileReader(self: localFile) !void {
         var file = try std.fs.cwd().openFile(file_path, .{.mode = .read_only });
         defer file.close();
 
