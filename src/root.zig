@@ -13,37 +13,23 @@ const localFile = struct {
         }
     }
 
-    fn detectFileType(self: localFile) ![]const u8 {
-        var file = try std.fs.cwd().openFile(self.filePath, .{.mode = .read_only });
-        defer file.close;
-
+    pub fn detectFileType(self: localFile) ![]const u8 {
+        var reader = self.readFile();
         var firstLine= std.ArrayList(u8).init(std.heap.page_allocator);
         defer firstLine.deinit();
-
-        var fileBuf = std.io.bufferedReader(file.reader());
-        var fileStream = fileBuf.reader();
-        
-        try reader.streamUntilDelimiter(firstLine.writer(), '\n', null);
         if (std.mem.startsWith(u8, firstLine.items, "%PDF")) {
             return "PDF"
         } else {
             return "unknownType"
         }
-
     }
 
-    fn readFile(self: localFile) !void {
+    fn readFile(self: localFile) !std.io.GenericReader {
         var file = try std.fs.cwd().openFile(file_path, .{.mode = .read_only });
         defer file.close();
 
         var fileBuf = std.io.bufferedReader(file.reader());
-        var in_stream = fileBuf.reader();
-
-        const stdout = std.io.getStdOut().writer();
-
-        var buf: [1024]u8 = undefined;
-        while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            try stdout.print("{s}\n", .{line});
-        }
+        
+        return fileBuf.reader();
     }
 }
