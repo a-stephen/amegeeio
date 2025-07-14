@@ -4,10 +4,29 @@
 const std = @import("std");
 const testing = std.testing;
 
-pub export fn add(a: i32, b: i32) i32 {
-    return a + b;
-}
+const LocalFile = struct {
+    filePath: []const u8,
 
-test "basic add functionality" {
-    try testing.expect(add(3, 7) == 10);
+    fn init(fileLocation: []u8) LocalFile {
+        return PdfFile{
+            .filePath: fileLocation
+        }
+    }
+
+    fn detectFileType() !void {}
+
+    fn fileReader(self: LocalFile) !void {
+        var file = try std.fs.cwd().openFile(file_path, .{.mode = .read_only });
+        defer file.close();
+
+        var fileBuf = std.io.bufferedReader(file.reader());
+        var in_stream = fileBuf.reader();
+
+        const stdout = std.io.getStdOut().writer();
+
+        var buf: [1024]u8 = undefined;
+        while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+            try stdout.print("{s}\n", .{line});
+        }
+    }
 }
