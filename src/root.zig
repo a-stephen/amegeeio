@@ -4,9 +4,10 @@
 const std = @import("std");
 const testing = std.testing;
 
-const BufferedFileReader = struct {
-    buffered: std.io.BufferedReader(4096, std.fs.File.Reader),
+
+const FileBuffered = struct {
     file: std.fs.File,
+    buffered: std.io.BufferedReader(4096, std.fs.File.Reader)
 };
 
 const localFile = struct {
@@ -19,9 +20,9 @@ const localFile = struct {
     }
 
     pub fn isPdf(self: localFile) ![]const u8 {
-        var readerStruct = try self.readFile();
-        var reader = readerStruct.reader();
-        
+        var buffStruct = try self.readFile();
+        var reader = buffStruct.buffered.reader();
+        defer buffStruct.file.close();
         // Declare a fixbuffer
         var buf: [1024]u8 = undefined;
         const line = try reader.readUntilDelimiter(
@@ -35,17 +36,18 @@ const localFile = struct {
         }
     }
 
-    fn readFile(self: localFile) !std.io.BufferedReader(
-        4096, std.fs.File.Reader) {
+    fn readFile(self: localFile) !FileBuffered {
         var file = try std.fs.cwd().openFile(
             self.filePath,
             .{ .mode = .read_only }
         );
-        defer file.close();
 
         const fileBuf = std.io.bufferedReader(file.reader());
         
-        return fileBuf;
+        return FileBuffered {
+            .buffered = fileBuf,
+            .file = file
+        };
     }
 };
 
