@@ -24,18 +24,9 @@ const localFile = struct {
         
         // Declare a fixbuffer
         var buf: [1024]u8 = undefined;
-        // var stream = std.io.fixedBufferStream(&buf);
-        // stream.reset();
-
         const line = try reader.readUntilDelimiter(
             &buf, '\n'
         );
-        // try std.io.getStdOut().writer().print("First line: {s}\n", .{line});
-        // var firstLine= std.ArrayList(u8).init(std.heap.page_allocator);
-        // defer firstLine.deinit();
-        // try reader.streamUntilDelimiter(
-        //     firstLine.writer(), '\n', firstLine.items.len);
-        // const line = stream.getWritten();
         if (std.mem.startsWith(u8, line, "%PDF")) {
             return "PDF";
         } else {
