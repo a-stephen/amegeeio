@@ -51,7 +51,7 @@ const localFile = struct {
 // === Tests ===
 test "detect file type" {
     var fileLocal = localFile{
-        .filePath = "/home/adjignon/Downloads/learn-to-program-ruby.pdf"
+        .filePath = "./learn-to-program-ruby.pdf"
     };
     const fileType = try fileLocal.detectFileType();
     try std.testing.expect(std.mem.eql(u8, fileType, "PDF"));
