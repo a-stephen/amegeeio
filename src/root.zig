@@ -21,29 +21,47 @@ const localFile = struct {
     pub fn detectFileType(self: localFile) ![]const u8 {
         var readerStruct = try self.readFile();
         var reader = readerStruct.reader();
-        var firstLine= std.ArrayList(u8).init(std.heap.page_allocator);
-        defer firstLine.deinit();
-        try reader.readUntilDelimiter(firstLine.writer(), '\n', null);
-        if (std.mem.startsWith(u8, firstLine.items, "%PDF")) {
+        
+        // Declare a fixbuffer
+        var buf: [1024]u8 = undefined;
+        // var stream = std.io.fixedBufferStream(&buf);
+        // stream.reset();
+
+        const line = try reader.readUntilDelimiter(
+            &buf, '\n'
+        );
+        // try std.io.getStdOut().writer().print("First line: {s}\n", .{line});
+        // var firstLine= std.ArrayList(u8).init(std.heap.page_allocator);
+        // defer firstLine.deinit();
+        // try reader.streamUntilDelimiter(
+        //     firstLine.writer(), '\n', firstLine.items.len);
+        // const line = stream.getWritten();
+        if (std.mem.startsWith(u8, line, "%PDF")) {
             return "PDF";
         } else {
             return "unknownType";
         }
     }
 
-    fn readFile(self: localFile) !std.io.GenericReader(std.fs.File, _) {
-        var file = try std.fs.cwd().openFile(self.filePath, .{ .mode = .read_only });
+    fn readFile(self: localFile) !std.io.BufferedReader(
+        4096, std.fs.File.Reader) {
+        var file = try std.fs.cwd().openFile(
+            self.filePath,
+            .{ .mode = .read_only }
+        );
         defer file.close();
 
         const fileBuf = std.io.bufferedReader(file.reader());
         
-        return fileBuf.reader();
+        return fileBuf;
     }
 };
 
 // === Tests ===
 test "detect file type" {
-    var fileLocal = localFile{.filePath = "/home/adjignon/Downloads/learn-to-program-ruby.pdf"};
+    var fileLocal = localFile{
+        .filePath = "/home/adjignon/Downloads/learn-to-program-ruby.pdf"
+    };
     const fileType = try fileLocal.detectFileType();
     try std.testing.expect(std.mem.eql(u8, fileType, "PDF"));
 }
