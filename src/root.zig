@@ -18,7 +18,7 @@ const localFile = struct {
         };
     }
 
-    pub fn detectFileType(self: localFile) ![]const u8 {
+    pub fn isPdf(self: localFile) ![]const u8 {
         var readerStruct = try self.readFile();
         var reader = readerStruct.reader();
         
@@ -27,6 +27,7 @@ const localFile = struct {
         const line = try reader.readUntilDelimiter(
             &buf, '\n'
         );
+        // Check if the buf content starts with PDF
         if (std.mem.startsWith(u8, line, "%PDF")) {
             return "PDF";
         } else {
@@ -51,8 +52,8 @@ const localFile = struct {
 // === Tests ===
 test "detect file type" {
     var fileLocal = localFile{
-        .filePath = "./learn-to-program-ruby.pdf"
+        .filePath = "../learn-to-program-ruby.pdf"
     };
-    const fileType = try fileLocal.detectFileType();
+    const fileType = try fileLocal.isPdf();
     try std.testing.expect(std.mem.eql(u8, fileType, "PDF"));
 }
