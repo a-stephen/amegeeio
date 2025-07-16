@@ -19,8 +19,8 @@ const localFile = struct {
         };
     }
 
-    pub fn isPdf(self: localFile) ![]const u8 {
-        var buffStruct = try self.readFile();
+    pub fn isPdf(self: localFile) !bool {
+        var buffStruct = try self.fileLazyOpener();
         var reader = buffStruct.buffered.reader();
         defer buffStruct.file.close();
         // Declare a fixbuffer
@@ -30,13 +30,13 @@ const localFile = struct {
         );
         // Check if the buf content starts with PDF
         if (std.mem.startsWith(u8, line, "%PDF")) {
-            return "PDF";
+            return true;
         } else {
-            return "unknownType";
+            return false;
         }
     }
 
-    fn readFile(self: localFile) !FileBuffered {
+    fn fileLazyOpener(self: localFile) !FileBuffered {
         var file = try std.fs.cwd().openFile(
             self.filePath,
             .{ .mode = .read_only }
@@ -47,15 +47,27 @@ const localFile = struct {
         return FileBuffered {
             .buffered = fileBuf,
             .file = file
-        };
+        }
     }
+
+    pub fn readFile(self: LocalFile) !std.ArrayList([]u8) {
+    }    
 };
 
+
+
+const PdfFile = struct {
+    filePath: []const u8,
+    isPdf: bool,
+    fileContent: []
+}
+
+
 // === Tests ===
-test "detect file type" {
+test "isPdf" {
     var fileLocal = localFile{
         .filePath = "../learn-to-program-ruby.pdf"
     };
     const fileType = try fileLocal.isPdf();
-    try std.testing.expect(std.mem.eql(u8, fileType, "PDF"));
+    try std.testing.expect(std.meta.eql(fileType, true));
 }
