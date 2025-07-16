@@ -47,30 +47,32 @@ const localFile = struct {
         return FileBuffered {
             .buffered = fileBuf,
             .file = file
-        }
+        };
     }
 
-    pub fn readFile(
-        self: LocalFile,
+    pub fn readPdfFile(
+        self: localFile,
         allocator: std.mem.Allocator
     ) !std.ArrayList([]u8) {
         var openLazy = try self.fileLazyOpener();
         defer openLazy.file.close();
         var lazyReader = openLazy.buffered.reader();
 
-        var fileContents = std.ArrayList(u8).init(allocator);
-        var buf: [1024]u8 = undefined;
+        var fileContents = std.ArrayList([]u8).init(allocator);
 
         while (true) {
-            const line = reader.readUntilDelimiter(
-                &buf, '\n') catch |err| switch (err) {
+            var line_buf = std.ArrayList(u8).init(allocator);
+            defer line_buf.deinit();
+            lazyReader.streamUntilDelimiter(
+                line_buf.writer(), '\n', null
+            ) catch |err| switch (err) {
                 error.EndOfStream => break,
                 else => return err,
             };
 
-            const heapCopy = try allocator.dupe(u8, line);
-            fileContents.append(heapCopy)
-        };
+            const heapCopy: []u8 = try allocator.dupe(u8, line_buf.items);
+            try fileContents.append(heapCopy);
+        }
 
         return fileContents;
     }    
@@ -85,4 +87,23 @@ test "isPdf" {
     };
     const fileType = try fileLocal.isPdf();
     try std.testing.expect(std.meta.eql(fileType, true));
+}
+
+test "Check for leaks in reading pdf file" {
+    var fileLocal = localFile{
+        .filePath = "../learn-to-program-ruby.pdf"
+    };
+    
+    var gpa = std.heap.GeneralPurposeAllocator(.{ .safety = true }){};
+    defer _ = gpa.deinit();
+
+    var allocator = gpa.allocator();
+    var fileContents = try fileLocal.readPdfFile(allocator);
+
+    defer {
+        for (fileContents.items) |item| allocator.free(item);
+        fileContents.deinit();
+    }
+
+    try std.testing.expect(!gpa.detectLeaks());
 }
