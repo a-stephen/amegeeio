@@ -20,9 +20,9 @@ const localFile = struct {
     }
 
     pub fn isPdf(self: localFile) !bool {
-        var buffStruct = try self.fileLazyOpener();
-        var reader = buffStruct.buffered.reader();
-        defer buffStruct.file.close();
+        var openLazy = try self.fileLazyOpener();
+        var reader = openLazy.buffered.reader();
+        defer openLazy.file.close();
         // Declare a fixbuffer
         var buf: [1024]u8 = undefined;
         const line = try reader.readUntilDelimiter(
@@ -50,17 +50,32 @@ const localFile = struct {
         }
     }
 
-    pub fn readFile(self: LocalFile) !std.ArrayList([]u8) {
+    pub fn readFile(
+        self: LocalFile,
+        allocator: std.mem.Allocator
+    ) !std.ArrayList([]u8) {
+        var openLazy = try self.fileLazyOpener();
+        defer openLazy.file.close();
+        var lazyReader = openLazy.buffered.reader();
+
+        var fileContents = std.ArrayList(u8).init(allocator);
+        var buf: [1024]u8 = undefined;
+
+        while (true) {
+            const line = reader.readUntilDelimiter(
+                &buf, '\n') catch |err| switch (err) {
+                error.EndOfStream => break,
+                else => return err,
+            };
+
+            const heapCopy = try allocator.dupe(u8, line);
+            fileContents.append(heapCopy)
+        };
+
+        return fileContents;
     }    
 };
 
-
-
-const PdfFile = struct {
-    filePath: []const u8,
-    isPdf: bool,
-    fileContent: []
-}
 
 
 // === Tests ===
