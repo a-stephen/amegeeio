@@ -34,8 +34,6 @@ fn readPdfFile(
         };
 
         const jBytes = try joinBytes(allocator, line_buf.items);
-        // defer allocator.free(jBytes);
-        // const heapCopy: []u8 = try allocator.dupe(u8, line_buf.items);
         try fileContents.append(jBytes);
     }
 
@@ -92,6 +90,14 @@ test "isPdf" {
     };
     const fileType = try fileLocal.isPdf();
     try std.testing.expect(std.meta.eql(fileType, true));
+}
+
+test "notPdf" {
+    var fileLocal = localFile{
+        .filePath = "../feather.png"
+    };
+    const fileType = try fileLocal.isPdf();
+    try std.testing.expect(std.meta.eql(fileType, false));
 }
 
 test "readPdfFile" {
