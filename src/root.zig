@@ -19,6 +19,16 @@ const localFile = struct {
         };
     }
 
+
+    fn joinBytes(allocator: std.mem.Allocator, bytes: []const u8) ![]u8 {
+        var result = std.ArrayList(u8).init(allocator);
+        defer result.deinit();
+        for (bytes) |byte| try result.append(byte);
+        return result.toOwnedSlice();
+    }
+
+
+
     pub fn isPdf(self: localFile) !bool {
         var openLazy = try self.fileLazyOpener();
         var reader = openLazy.buffered.reader();
@@ -51,27 +61,25 @@ const localFile = struct {
     }
 
     pub fn readPdfFile(
-        self: localFile,
+        reader: anytype,
         allocator: std.mem.Allocator
     ) !std.ArrayList([]u8) {
-        var openLazy = try self.fileLazyOpener();
-        defer openLazy.file.close();
-        var lazyReader = openLazy.buffered.reader();
-
         var fileContents = std.ArrayList([]u8).init(allocator);
 
         while (true) {
             var line_buf = std.ArrayList(u8).init(allocator);
             defer line_buf.deinit();
-            lazyReader.streamUntilDelimiter(
+            reader.streamUntilDelimiter(
                 line_buf.writer(), '\n', null
             ) catch |err| switch (err) {
                 error.EndOfStream => break,
                 else => return err,
             };
 
-            const heapCopy: []u8 = try allocator.dupe(u8, line_buf.items);
-            try fileContents.append(heapCopy);
+            const jBytes = try joinBytes(allocator, line_buff.items);
+            defer allocator.free(jBytes);
+            // const heapCopy: []u8 = try allocator.dupe(u8, line_buf.items);
+            try fileContents.append(jBytes);
         }
 
         return fileContents;
@@ -93,17 +101,23 @@ test "Check for leaks in reading pdf file" {
     var fileLocal = localFile{
         .filePath = "../learn-to-program-ruby.pdf"
     };
-    
+   
+    var lazyFile = fileLocal.fileLazyOpener();
+    defer lazyFile.close();
+    const reader = lazyFile.buffered.reader();
+
     var gpa = std.heap.GeneralPurposeAllocator(.{ .safety = true }){};
     defer _ = gpa.deinit();
 
     var allocator = gpa.allocator();
-    var fileContents = try fileLocal.readPdfFile(allocator);
+    var fileContents = try fileLocal.readPdfFile(reader, allocator);
 
     defer {
         for (fileContents.items) |item| allocator.free(item);
         fileContents.deinit();
     }
 
-    try std.testing.expect(!gpa.detectLeaks());
+    try std.testing.expect(
+        std.testing.expectEqualStrings(fileContents.items[0], "%PDF-1.4")
+    );
 }
