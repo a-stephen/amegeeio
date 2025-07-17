@@ -10,6 +10,38 @@ const FileBuffered = struct {
     buffered: std.io.BufferedReader(4096, std.fs.File.Reader)
 };
 
+fn joinBytes(allocator: std.mem.Allocator, bytes: []const u8) ![]u8 {
+    var result = std.ArrayList(u8).init(allocator);
+    defer result.deinit();
+    for (bytes) |byte| try result.append(byte);
+    return result.toOwnedSlice();
+}
+
+fn readPdfFile(
+    reader: anytype,
+    allocator: std.mem.Allocator
+) !std.ArrayList([]u8) {
+    var fileContents = std.ArrayList([]u8).init(allocator);
+
+    while (true) {
+        var line_buf = std.ArrayList(u8).init(allocator);
+        defer line_buf.deinit();
+        reader.streamUntilDelimiter(
+            line_buf.writer(), '\n', null
+        ) catch |err| switch (err) {
+            error.EndOfStream => break,
+            else => return err,
+        };
+
+        const jBytes = try joinBytes(allocator, line_buf.items);
+        // defer allocator.free(jBytes);
+        // const heapCopy: []u8 = try allocator.dupe(u8, line_buf.items);
+        try fileContents.append(jBytes);
+    }
+
+    return fileContents;
+} 
+
 const localFile = struct {
     filePath: []const u8,
 
@@ -18,16 +50,6 @@ const localFile = struct {
             .filePath = fileLocation,
         };
     }
-
-
-    fn joinBytes(allocator: std.mem.Allocator, bytes: []const u8) ![]u8 {
-        var result = std.ArrayList(u8).init(allocator);
-        defer result.deinit();
-        for (bytes) |byte| try result.append(byte);
-        return result.toOwnedSlice();
-    }
-
-
 
     pub fn isPdf(self: localFile) !bool {
         var openLazy = try self.fileLazyOpener();
@@ -46,7 +68,7 @@ const localFile = struct {
         }
     }
 
-    fn fileLazyOpener(self: localFile) !FileBuffered {
+    pub fn fileLazyOpener(self: localFile) !FileBuffered {
         var file = try std.fs.cwd().openFile(
             self.filePath,
             .{ .mode = .read_only }
@@ -59,31 +81,6 @@ const localFile = struct {
             .file = file
         };
     }
-
-    pub fn readPdfFile(
-        reader: anytype,
-        allocator: std.mem.Allocator
-    ) !std.ArrayList([]u8) {
-        var fileContents = std.ArrayList([]u8).init(allocator);
-
-        while (true) {
-            var line_buf = std.ArrayList(u8).init(allocator);
-            defer line_buf.deinit();
-            reader.streamUntilDelimiter(
-                line_buf.writer(), '\n', null
-            ) catch |err| switch (err) {
-                error.EndOfStream => break,
-                else => return err,
-            };
-
-            const jBytes = try joinBytes(allocator, line_buff.items);
-            defer allocator.free(jBytes);
-            // const heapCopy: []u8 = try allocator.dupe(u8, line_buf.items);
-            try fileContents.append(jBytes);
-        }
-
-        return fileContents;
-    }    
 };
 
 
@@ -97,27 +94,29 @@ test "isPdf" {
     try std.testing.expect(std.meta.eql(fileType, true));
 }
 
-test "Check for leaks in reading pdf file" {
+test "readPdfFile" {
     var fileLocal = localFile{
         .filePath = "../learn-to-program-ruby.pdf"
     };
    
-    var lazyFile = fileLocal.fileLazyOpener();
-    defer lazyFile.close();
+    var lazyFile = try fileLocal.fileLazyOpener();
+    defer lazyFile.file.close();
     const reader = lazyFile.buffered.reader();
 
     var gpa = std.heap.GeneralPurposeAllocator(.{ .safety = true }){};
     defer _ = gpa.deinit();
 
     var allocator = gpa.allocator();
-    var fileContents = try fileLocal.readPdfFile(reader, allocator);
+    var fileContents = try readPdfFile(reader, allocator);
 
     defer {
         for (fileContents.items) |item| allocator.free(item);
         fileContents.deinit();
     }
 
+    // try std.io.getStdOut().writer().print("{s}\n", .{fileContents.items[0]});
+
     try std.testing.expect(
-        std.testing.expectEqualStrings(fileContents.items[0], "%PDF-1.4")
+        std.mem.eql(u8, fileContents.items[0], "%PDF-1.4")
     );
 }
