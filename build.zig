@@ -18,14 +18,14 @@ pub fn build(b: *std.Build) void {
     });
 
 
-    // const exe_mod = b.addExecutable(.{
-    //     .name = "amegeeio",
-    //     .root_source_file = b.path("src/main.zig"),
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
-    //
-    // exe_mod.addImport("amegeeio_lib", lib_mod);
+    _ = b.addModule(
+        "amegee_pdf",
+        .{
+            .root_source_file = b.path("src/pdf/pdf.zig"),
+            .target = target,
+            .optimize = optimize
+        }
+    );
 
     const lib =  b.addLibrary(.{
         .linkage = .static,
@@ -34,25 +34,16 @@ pub fn build(b: *std.Build) void {
     });
 
 
-    // Define a named module for your src folder
-    // lib.addModule("pdf", .{
-    //     .source_file = b.path("src/pdf/pdf.zig"), // or use root if it's a package
-    // });
-
     b.installArtifact(lib);
 
     // Optional: if you want to run tests with `zig build test`
-    const tests = b.addTest(.{
-        .root_source_file = b.path("tests/test_*.zig"),
+    const lib_unit_tests = b.addTest(.{
+        .root_source_file = b.path("tests/test_pdf.zig"),
         .target = target,
         .optimize = optimize,
     });
-
-    // tests.addModule("pdf", .{
-    //     .source_file = b.path("src/pdf/pdf.zig"),
-    // });
-
-    b.step("test", "Run tests").dependOn(&tests.step);
+    
+    b.step("test", "Run tests").dependOn(&lib_unit_tests.step);
 }
 
 
