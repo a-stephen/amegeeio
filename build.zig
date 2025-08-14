@@ -1,49 +1,43 @@
 const std = @import("std");
 
 
-// const std = @import("std");
-//
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib_mod = b.createModule(.{
-        // `root_source_file` is the Zig "entry point" of the module. If a module
-        // only contains e.g. external object files, you can make this `null`.
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
+    const lib = b.addStaticLibrary(.{
+        .name = "pdf",
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
-
-
-    _ = b.addModule(
-        "amegee_pdf",
-        .{
-            .root_source_file = b.path("src/pdf/pdf.zig"),
-            .target = target,
-            .optimize = optimize
-        }
-    );
-
-    const lib =  b.addLibrary(.{
-        .linkage = .static,
-        .name = "amegeeio",
-        .root_module = lib_mod,
-    });
-
-
     b.installArtifact(lib);
 
-    // Optional: if you want to run tests with `zig build test`
-    const lib_unit_tests = b.addTest(.{
-        .root_source_file = b.path("tests/test_pdf.zig"),
+    // Make @import possible everywhere
+    // _ = b.addModule(
+    //     "pdf_reader",
+    //     .{
+    //         .root_source_file = b.path("src/root.zig")
+    //     }
+    // );
+
+
+    const tests = b.addTest(.{
+        .root_source_file = b.path("test/all_tests.zig"),
         .target = target,
         .optimize = optimize,
     });
-    
-    b.step("test", "Run tests").dependOn(&lib_unit_tests.step);
+    tests.root_module.addImport(
+        "pdf_reader", 
+        b.createModule(.{
+            .root_source_file = b.path("src/pdf/pdf.zig"),
+            .target = target,
+            .optimize = optimize,
+        })
+    );
+    // b.installArtifact(tests);
+
+    b.step("test", "Run tests").dependOn(&tests.step);
 }
 
 
