@@ -1,6 +1,19 @@
 const std = @import("std");
 
 
+const test_targets = [_]std.Target.Query{
+    .{}, // native
+    .{
+        .cpu_arch = .x86_64,
+        .os_tag = .linux,
+    },
+    // .{
+    //     .cpu_arch = .aarch64,
+    //     .os_tag = .macos,
+    // },
+};
+
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -13,31 +26,35 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(lib);
 
-    // Make @import possible everywhere
-    // _ = b.addModule(
-    //     "pdf_reader",
-    //     .{
-    //         .root_source_file = b.path("src/root.zig")
-    //     }
-    // );
+    // const test_filter = b.option([]const u8, "test-filter", "Filter for test names");
 
 
-    const tests = b.addTest(.{
-        .root_source_file = b.path("test/all_tests.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    tests.root_module.addImport(
-        "pdf_reader", 
-        b.createModule(.{
-            .root_source_file = b.path("src/pdf/pdf.zig"),
-            .target = target,
-            .optimize = optimize,
-        })
-    );
-    // b.installArtifact(tests);
+    const test_step = b.step("test", "Run tests");
+    for (test_targets) |t_target| {
 
-    b.step("test", "Run tests").dependOn(&tests.step);
+        const unit_tests = b.addTest(.{
+            .root_source_file = b.path("test/all_tests.zig"),
+            .target = b.resolveTargetQuery(t_target),
+            // .optimize = optimize,
+            // .filter = test_filter,
+        });
+
+        unit_tests.root_module.addImport(
+            "pdf_reader", 
+            b.createModule(.{
+                .root_source_file = b.path("src/pdf/pdf.zig"),
+                .target = b.resolveTargetQuery(t_target),
+                // .optimize = optimize,
+            })
+        );
+        // const unit_tests = b.addTest(.{
+        //     .root_source_file = b.path("main.zig"),
+        //     .target = b.resolveTargetQuery(target),
+        // });
+        //
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        test_step.dependOn(&run_unit_tests.step);
+    }
 }
 
 
