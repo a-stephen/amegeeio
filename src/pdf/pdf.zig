@@ -5,14 +5,14 @@ const FileBuffered = struct {
     buffered: std.io.BufferedReader(4096, std.fs.File.Reader)
 };
 
-fn joinBytes(allocator: std.mem.Allocator, bytes: []const u8) ![]u8 {
+pub fn joinBytes(allocator: std.mem.Allocator, bytes: []const u8) ![]u8 {
     var result = std.ArrayList(u8).init(allocator);
     defer result.deinit();
     for (bytes) |byte| try result.append(byte);
     return result.toOwnedSlice();
 }
 
-fn readPdfFile(
+pub fn readPdfFile(
     reader: anytype,
     allocator: std.mem.Allocator
 ) !std.ArrayList([]u8) {
@@ -36,10 +36,10 @@ fn readPdfFile(
 }
 
 
-const pdfParser = struct {};
+// const pdfParser = struct {};
 
 
-const localFile = struct {
+pub const localFile = struct {
     filePath: []const u8,
 
     fn init(fileLocation: []u8) localFile {
