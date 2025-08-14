@@ -1,28 +1,31 @@
 const std = @import("std");
 const testing = std.testing;
-const pdf = @import("root.zig");
+const pdf = @import("pdf_reader");
 
 
 const pdfFile = pdf.localFile{ 
-    .filePath = "../examples/learn-to-program-ruby.pdf"
+    .filePath = "./examples/learn-to-program-ruby.pdf"
 };
 
 const imageFile = pdf.localFile{
-    .filePath = "../examples/feather.png"
+    .filePath = "./examples/feather.png"
 };
 
 
-test "isPdf" {
+test "pdf: isPdf" {
     const fileType = try pdfFile.isPdf();
+    defer std.debug.print("✓ Passed\n", .{});
     try std.testing.expect(std.meta.eql(fileType, true));
 }
 
-test "notPdf" {
+test "pdf: notPdf" {
     const fileType = try imageFile.isPdf();
+    defer std.debug.print("✓ Passed\n", .{});
     try std.testing.expect(std.meta.eql(fileType, false));
 }
 
-test "readPdfFile" {
+test "pdf: readPdfFile" {
+    defer std.debug.print("✓ Passed\n", .{});
     var lazyFile = try pdfFile.fileLazyOpener();
     defer lazyFile.file.close();
     const reader = lazyFile.buffered.reader();
