@@ -23,8 +23,26 @@ fn joinSlices(allocator: std.mem.Allocator, contents: std.ArrayList([]u8)) ![]u8
 }
 
 
+const TokenType = enum {
+    Keyword,
+    Delimiter,
+    Name,
+    StringLiteral,
+    HexString,
+    Number,
+    Comment,
+    EOF,
+    Unknown,
+};
 
 
+const token = struct {
+    typ: TokenType,
+    value: []const u8
+}
+
+
+fn tokenize(allocator: std.mem.Allocator, input: []u8) ![]token {}
 
 
 pub const PdfContentParser = struct {
