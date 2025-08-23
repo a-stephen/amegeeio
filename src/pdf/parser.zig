@@ -36,13 +36,39 @@ const TokenType = enum {
 };
 
 
-const token = struct {
+const Token = struct {
     typ: TokenType,
     value: []const u8
+};
+
+
+pub fn tokenize(allocator: std.mem.Allocator, input: []u8) ![]Token {
+    var tokens: std.ArrayList(Token) = std.ArrayList(Token).init(allocator);
+
+    var i: usize = 0;
+    while (i < input.len) {
+        const c = input[i];
+
+        if (std.ascii.isWhitespace(c)) {
+            i += 1;
+            continue;
+        }
+
+        if (c == '%') {
+            i += 1;
+            while (i < input.len and input[i] != '\n') : (i += 1) {}
+            continue;
+        }
+        if (c == '(' or c == ')' or c == '[' or c == ']' or c == '<' or c == '>' or c == '/' or c == '{' or c == '}') {
+            try tokens.append(Token{ .typ = .Delimiter, .value = input[i..i+1] });
+            i += 1;
+            continue;
+        }
+    }
+
+    try tokens.append(Token{ .typ = .EOF, .value = "" });
+    return tokens.toOwnedSlice();
 }
-
-
-fn tokenize(allocator: std.mem.Allocator, input: []u8) ![]token {}
 
 
 pub const PdfContentParser = struct {
