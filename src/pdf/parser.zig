@@ -23,6 +23,10 @@ fn joinSlices(allocator: std.mem.Allocator, contents: std.ArrayList([]u8)) ![]u8
 }
 
 
+
+
+
+
 pub const PdfContentParser = struct {
     fileContent: std.ArrayList([]u8),
 
@@ -32,16 +36,7 @@ pub const PdfContentParser = struct {
         };
     }
 
-    pub fn readData(self: PdfContentParser) ![]u8 {
-        var gpa = std.heap.GeneralPurposeAllocator(.{ .safety = true }){};
-        defer _ = gpa.deinit();
-        
-        const allocator = gpa.allocator();
-
-        const fullContent = try joinSlices(allocator, self.fileContent);
-
-        // defer allocator.free(fullContent);
-
-        return fullContent;
+    pub fn readData(self: PdfContentParser, allocator: std.mem.Allocator) ![]u8 {
+        return try joinSlices(allocator, self.fileContent);
     }
 };
