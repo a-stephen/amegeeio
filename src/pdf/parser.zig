@@ -50,6 +50,7 @@ pub fn tokenize(allocator: std.mem.Allocator, input: []u8) ![]Token {
         const c = input[i];
 
         if (std.ascii.isWhitespace(c)) {
+            try std.io.getStdOut().writer().print("{c}\n", .{c});
             i += 1;
             continue;
         }
@@ -59,15 +60,54 @@ pub fn tokenize(allocator: std.mem.Allocator, input: []u8) ![]Token {
             while (i < input.len and input[i] != '\n') : (i += 1) {}
             continue;
         }
+
+        if (std.ascii.isDigit(c) or c == '-' or c == '+') {
+            const start = i;
+            i += 1;
+            while (i < input.len and (std.ascii.isDigit(input[i]) or input[i] == '.')) : (i += 1) {}
+            try tokens.append(Token{ .typ = .Number, .value = input[start..i] });
+            continue;
+        }
+
         if (c == '(' or c == ')' or c == '[' or c == ']' or c == '<' or c == '>' or c == '/' or c == '{' or c == '}') {
             try tokens.append(Token{ .typ = .Delimiter, .value = input[i..i+1] });
             i += 1;
             continue;
         }
+
+        if (c == '/') {
+            const start = i;
+            i += 1;
+            while (i < input.len and !std.ascii.isWhitespace(input[i]) and !isDelimiter(input[i])) : (i += 1) {}
+            try tokens.append(Token{ .typ = .Name, .value = input[start..i] });
+            continue;
+        }
+
+        // Tokenize keywords and identifiers
+        if (std.ascii.isAlphabetic(c)) {
+            const start = i;
+            i += 1;
+            while (i < input.len and (std.ascii.isAlphabetic(input[i]) or std.ascii.isDigit(input[i]))) : (i += 1) {}
+            const val = input[start..i];
+            try tokens.append(Token{ .typ = .Keyword, .value = val });
+            continue;
+        }
+
+        // If none matched, append unknown token
+        try tokens.append(Token{ .typ = .Unknown, .value = input[i..i+1] });
+        i += 1;
     }
 
     try tokens.append(Token{ .typ = .EOF, .value = "" });
     return tokens.toOwnedSlice();
+}
+
+
+fn isDelimiter(c: u8) bool {
+    return switch (c) {
+        '(', ')', '[', ']', '<', '>', '/', '{', '}' => true,
+        else => false,
+    };
 }
 
 
