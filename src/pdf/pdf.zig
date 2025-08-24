@@ -78,4 +78,8 @@ pub const localFile = struct {
             .file = file
         };
     }
+
+    pub fn readFile() !std.ArrayList([]u8) {
+        return !std.ArrayList([]u8);
+    }
 };
